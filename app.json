@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "PixelPrices",
+    "slug": "pixelprices",
+    "version": "1.0.2",
+    "orientation": "portrait",
+    "icon": "./assets/icons/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pixelprices",
+      "icon": "./assets/icons/icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#0a0a0f"
+      },
+      "package": "com.pixelprices",
+      "icon": "./assets/icons/android-512.png",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "com.google.android.gms.permission.AD_ID"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0b710e90-d906-41de-a82c-e0e51bc0657a"
+      }
+    },
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4339337123328082~6116345618",
+          "iosAppId": "ca-app-pub-4339337123328082~6116345618",
+          "delayAppMeasurementInit": true
+        }
+      ]
+    ]
+  }
+}
