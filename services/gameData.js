@@ -177,14 +177,14 @@ export async function fetchNewReleases() {
     const fmt = d => d.toISOString().split('T')[0];
 
     const rawgRes = await fetch(
-      `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${fmt(past90)},${fmt(today)}&ordering=-added&page_size=20&platforms=4&parent_platforms=1`
+      `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${fmt(past90)},${fmt(today)}&ordering=-added&page_size=40&platforms=4&parent_platforms=1`
     );
     if (!rawgRes.ok) return fetchDealsPage('Recent', 1);
     const rawgData = await rawgRes.json();
     if (!rawgData.results?.length) return fetchDealsPage('Recent', 1);
 
     // Limite à 8 jeux pour éviter le rate limiting
-    const topGames = rawgData.results.slice(0, 8);
+    const topGames = rawgData.results.slice(0, 20);
     const results = [];
 
     // Séquentiel au lieu de parallel pour éviter le flooding
