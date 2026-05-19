@@ -4,7 +4,7 @@ import { isPremium } from '../services/premium';
 
 const BANNER_ID = 'ca-app-pub-4339337123328082/1051721193';
 const INTERSTITIAL_ID = 'ca-app-pub-4339337123328082/5426080473';
-const INTERSTITIAL_EVERY_N_CLICKS = 8;
+const INTERSTITIAL_EVERY_N_CLICKS = 6;
 
 let clickCounter = 0;
 let interstitialAd = null;
