@@ -2,7 +2,7 @@
   "expo": {
     "name": "PixelPrices",
     "slug": "pixelprices",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icons/icon.png",
     "userInterfaceStyle": "dark",
@@ -28,7 +28,7 @@
         "android.permission.ACCESS_NETWORK_STATE",
         "com.google.android.gms.permission.AD_ID"
       ],
-      "versionCode": 12
+      "versionCode": 13
     },
     "extra": {
       "eas": {
