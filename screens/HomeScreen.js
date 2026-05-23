@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 11, fontWeight: '700', color: COLORS.text3 },
   tabTextActive: { color: COLORS.primary },
   tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, backgroundColor: COLORS.primary, borderRadius: 2 },
-  list: { padding: 16 },
+  list: { padding: 16, paddingBottom: 80 },
   sectionLabel: { fontSize: 10, fontWeight: '800', color: COLORS.text4, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontSize: 14, color: COLORS.text3, fontWeight: '700', textAlign: 'center', paddingHorizontal: 32 },
