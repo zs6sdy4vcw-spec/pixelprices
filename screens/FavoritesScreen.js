@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  Image, StyleSheet, Alert, Platform,
+  Image, StyleSheet, Alert, Platform, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -12,6 +12,8 @@ import AdBanner from '../components/AdBanner';
 import { isPremium, FREE_LIMITS } from '../services/premium';
 
 export default function FavoritesScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 600;
   const [favorites, setFavorites] = useState([]);
   const [userIsPremium, setUserIsPremium] = useState(false);
 
@@ -53,11 +55,14 @@ export default function FavoritesScreen({ navigation }) {
       </View>
 
       <FlatList
+        key={isTablet ? 'tablet' : 'phone'}
         data={favorites}
         keyExtractor={item => String(item.id)}
-        contentContainerStyle={styles.list}
+        numColumns={isTablet ? 2 : 1}
+        columnWrapperStyle={isTablet ? { gap: 12, paddingHorizontal: 24 } : undefined}
+        contentContainerStyle={[styles.list, isTablet && { paddingHorizontal: 0, paddingBottom: 100 }]}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Detail', { game: item })} activeOpacity={0.75}>
+          <TouchableOpacity style={[styles.card, isTablet && { flex: 1 }]} onPress={() => navigation.navigate('Detail', { game: item })} activeOpacity={0.75}>
             <View style={styles.cardImg}>
               {item.imageUrl
                 ? <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />

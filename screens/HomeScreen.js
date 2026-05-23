@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, TextInput,
   Image, StyleSheet, ActivityIndicator,
-  RefreshControl, Modal, Platform,
+  RefreshControl, Modal, Platform, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, RAWG_API_KEY } from '../constants/theme';
+import { COLORS } from '../constants/theme';
 import i18n from '../services/i18n';
 import AdBanner from '../components/AdBanner';
 import { fetchNewReleases, fetchDealsPage } from '../services/gameData';
@@ -33,9 +33,7 @@ function MetaBadge({ score }) {
   return (
     <View style={[styles.badge, { backgroundColor: bg, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
       <Text style={styles.badgeText}>MC</Text>
-      <View style={styles.mcScorePill}>
-        <Text style={styles.mcScoreText}>{score}</Text>
-      </View>
+      <View style={styles.mcScorePill}><Text style={styles.mcScoreText}>{score}</Text></View>
     </View>
   );
 }
@@ -44,11 +42,9 @@ function DaysAgoBadge({ releaseDate }) {
   if (!releaseDate) return null;
   const days = Math.round((new Date() - new Date(releaseDate)) / (1000 * 60 * 60 * 24));
   let label;
-  if (days === 0) {
-    label = i18n('today');
-  } else if (days === 1) {
-    label = i18n('yesterday');
-  } else {
+  if (days === 0) label = i18n('today');
+  else if (days === 1) label = i18n('yesterday');
+  else {
     const prefix = i18n('daysAgoPrefix');
     const suffix = i18n('days');
     label = prefix ? `${prefix} ${days} ${suffix}` : `${days} ${suffix}`;
@@ -60,20 +56,21 @@ function DaysAgoBadge({ releaseDate }) {
   );
 }
 
-function GameCard({ game, onPress, currency }) {
+function GameCard({ game, onPress, currency, isTablet }) {
   const validPrices = game.prices.filter(p => p.price > 0);
   const minUSD = validPrices.length ? Math.min(...validPrices.map(p => p.price)) : 0;
   const maxNormal = validPrices.length ? Math.max(...validPrices.map(p => p.normalPrice || p.price)) : 0;
   const converted = minUSD > 0 ? convertPrice(minUSD, currency) : null;
   const savedConverted = (maxNormal - minUSD) > 0.5 ? convertPrice(maxNormal - minUSD, currency) : 0;
   const maxDiscount = validPrices.length ? Math.max(...validPrices.map(p => parseFloat(p.savings) || 0)) : 0;
+  const imgSize = isTablet ? 100 : 80;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(game)} activeOpacity={0.75}>
-      <View style={styles.cardImg}>
+    <TouchableOpacity style={[styles.card, isTablet && styles.cardTablet]} onPress={() => onPress(game)} activeOpacity={0.75}>
+      <View style={[styles.cardImg, { width: imgSize, height: imgSize }]}>
         {game.imageUrl
-          ? <Image source={{ uri: game.imageUrl }} style={styles.cardImgInner} resizeMode="cover" />
-          : <View style={styles.skeleton}><Text style={{ fontSize: 22 }}>🖥️</Text></View>
+          ? <Image source={{ uri: game.imageUrl }} style={{ width: imgSize, height: imgSize }} resizeMode="cover" />
+          : <View style={[styles.skeleton, { width: imgSize, height: imgSize }]}><Text style={{ fontSize: 22 }}>🖥️</Text></View>
         }
         {maxDiscount >= 50 && (
           <View style={[styles.discountOverlay, { backgroundColor: maxDiscount >= 75 ? '#dc2626' : '#d97706' }]}>
@@ -82,7 +79,7 @@ function GameCard({ game, onPress, currency }) {
         )}
       </View>
       <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={2}>{game.title}</Text>
+        <Text style={[styles.cardTitle, isTablet && { fontSize: 15, marginBottom: 7 }]} numberOfLines={2}>{game.title}</Text>
         <View style={styles.cardMeta}>
           <View style={[styles.badge, { backgroundColor: 'rgba(74,222,128,0.15)' }]}>
             <Text style={[styles.badgeText, { color: COLORS.green }]}>💻 PC</Text>
@@ -90,14 +87,14 @@ function GameCard({ game, onPress, currency }) {
           <MetaBadge score={game.metacritic} />
           {game.releaseDate && <DaysAgoBadge releaseDate={game.releaseDate} />}
         </View>
-        <Text style={styles.cardStores}>
+        <Text style={[styles.cardStores, isTablet && { fontSize: 12 }]}>
           {validPrices.length} {i18n('stores', validPrices.length)}
         </Text>
       </View>
-      <View style={styles.cardRight}>
+      <View style={[styles.cardRight, isTablet && { minWidth: 90 }]}>
         {converted ? (
           <>
-            <Text style={styles.bestPrice}>{converted.toFixed(2)}</Text>
+            <Text style={[styles.bestPrice, isTablet && { fontSize: 20 }]}>{converted.toFixed(2)}</Text>
             <Text style={styles.bestCurrency}>{currency}</Text>
             {savedConverted > 0.5 && <Text style={styles.savings}>-{savedConverted.toFixed(0)}</Text>}
           </>
@@ -132,6 +129,10 @@ function CurrencyPicker({ visible, current, onSelect, onClose }) {
 }
 
 export default function HomeScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 600;
+  const numColumns = isTablet ? 2 : 1;
+
   const TABS = [
     { id: 'new',     label: i18n('tabNew')     },
     { id: 'hot',     label: i18n('tabHot')     },
@@ -188,7 +189,9 @@ export default function HomeScreen({ navigation }) {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(`https://www.cheapshark.com/api/1.0/games?title=${encodeURIComponent(search)}&limit=20`, { headers: { 'User-Agent': 'PixelPrices/1.0 (pixelpricesapp@gmail.com)', 'Accept': 'application/json' } });
+        const res = await fetch(`https://www.cheapshark.com/api/1.0/games?title=${encodeURIComponent(search)}&limit=20`, {
+          headers: { 'User-Agent': 'PixelPrices/1.0 (pixelpricesapp@gmail.com)', 'Accept': 'application/json' }
+        });
         if (!res.ok) { setSearching(false); return; }
         const games = await res.json();
         if (!Array.isArray(games)) { setSearching(false); return; }
@@ -227,17 +230,22 @@ export default function HomeScreen({ navigation }) {
     return i18n('loadingSavings');
   };
 
+  // Pour 2 colonnes, pad les données si impair
+  const paddedData = numColumns === 2 && displayData.length % 2 !== 0
+    ? [...displayData, { id: '__placeholder__', prices: [], title: '' }]
+    : displayData;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && { paddingHorizontal: 24 }]}>
         <View style={styles.headerTop}>
           <View style={styles.logoRow}>
-            <Image source={LOGO} style={styles.logoImg} resizeMode="contain" />
-            <Text style={styles.logoText}>Pixel<Text style={{ color: '#4ade80' }}>Prices</Text></Text>
+            <Image source={LOGO} style={[styles.logoImg, isTablet && { width: 40, height: 40 }]} resizeMode="contain" />
+            <Text style={[styles.logoText, isTablet && { fontSize: 26 }]}>Pixel<Text style={{ color: '#4ade80' }}>Prices</Text></Text>
           </View>
           <TouchableOpacity style={styles.currencyBtn} onPress={() => setShowPicker(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.currencyBtnFlag}>{curInfo?.label.split(' ')[0]}</Text>
-            <Text style={styles.currencyBtnCode}>{currency}</Text>
+            <Text style={[styles.currencyBtnCode, isTablet && { fontSize: 15 }]}>{currency}</Text>
             <Text style={styles.currencyBtnArrow}>▾</Text>
           </TouchableOpacity>
         </View>
@@ -247,7 +255,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.searchWrap}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, isTablet && { fontSize: 16 }]}
             placeholder={i18n('searchPlaceholder')}
             placeholderTextColor={COLORS.text4}
             value={search}
@@ -269,7 +277,7 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => setActiveTab(tab.id)}
                 hitSlop={{ top: 4, bottom: 4 }}
               >
-                <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>{tab.label}</Text>
+                <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive, isTablet && { fontSize: 13 }]}>{tab.label}</Text>
                 {activeTab === tab.id && <View style={styles.tabIndicator} />}
               </TouchableOpacity>
             ))}
@@ -285,15 +293,22 @@ export default function HomeScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
-          data={displayData}
+          key={numColumns} // Force re-render quand colonnes changent
+          data={paddedData}
           keyExtractor={item => String(item.id)}
-          contentContainerStyle={styles.list}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns === 2 ? { gap: 12, paddingHorizontal: isTablet ? 24 : 16 } : undefined}
+          contentContainerStyle={[styles.list, isTablet && { paddingHorizontal: numColumns === 2 ? 0 : 24, paddingBottom: 100 }]}
           refreshControl={
             !search.trim()
               ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
               : undefined
           }
-          ListHeaderComponent={<Text style={styles.sectionLabel}>{getSectionLabel()}</Text>}
+          ListHeaderComponent={
+            <Text style={[styles.sectionLabel, isTablet && { paddingHorizontal: numColumns === 2 ? 24 : 0, fontSize: 11 }]}>
+              {getSectionLabel()}
+            </Text>
+          }
           ListFooterComponent={loadingMore ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 }}>
               <ActivityIndicator size="small" color={COLORS.primary} />
@@ -311,9 +326,19 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.emptyText}>{i18n('pullRefresh')}</Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <GameCard game={item} currency={currency} onPress={game => navigation.navigate('Detail', { game, currency })} />
-          )}
+          renderItem={({ item }) => {
+            if (item.id === '__placeholder__') return <View style={{ flex: 1, margin: 6 }} />;
+            return (
+              <View style={numColumns === 2 ? { flex: 1 } : {}}>
+                <GameCard
+                  game={item}
+                  currency={currency}
+                  isTablet={isTablet}
+                  onPress={game => navigation.navigate('Detail', { game, currency })}
+                />
+              </View>
+            );
+          }}
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         />
       )}
@@ -351,9 +376,9 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 14, color: COLORS.text3, fontWeight: '700', textAlign: 'center', paddingHorizontal: 32 },
   loadingSubtext: { fontSize: 11, color: COLORS.text4 },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface2, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
-  cardImg: { width: 80, height: 80, backgroundColor: '#1a1a2e', position: 'relative' },
-  cardImgInner: { width: 80, height: 80 },
-  skeleton: { width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },
+  cardTablet: { borderRadius: 16 },
+  cardImg: { backgroundColor: '#1a1a2e', position: 'relative' },
+  skeleton: { alignItems: 'center', justifyContent: 'center' },
   discountOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingVertical: 3, alignItems: 'center' },
   discountOverlayText: { fontSize: 9, fontWeight: '800', color: '#fff' },
   cardBody: { flex: 1, padding: 10 },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput,
-  FlatList, StyleSheet, Alert, Platform, Modal, ScrollView,
+  FlatList, StyleSheet, Alert, Platform, Modal, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -81,6 +81,8 @@ function StorePicker({ visible, selected, onSelect, onClose, userIsPremium, navi
 }
 
 export default function AlertsScreen({ navigation, route }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 600;
   const [alerts, setAlerts] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [gameTitle, setGameTitle] = useState('');
@@ -318,7 +320,7 @@ const styles = StyleSheet.create({
   premiumBadge: { backgroundColor: 'rgba(251,191,36,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: Platform.OS === 'android' ? 8 : 5, borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' },
   premiumBadgeText: { fontSize: 12, fontWeight: '700', color: '#fbbf24' },
   subtitle: { fontSize: 13, color: COLORS.text3 },
-  list: { padding: 16, paddingBottom: 16 },
+  list: { padding: 16, paddingBottom: 100 },
 
   // Form
   addCard: { backgroundColor: COLORS.surface2, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)', padding: 16, marginBottom: 16 },

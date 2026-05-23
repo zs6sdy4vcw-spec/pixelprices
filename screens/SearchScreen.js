@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, FlatList, TouchableOpacity,
-  Image, StyleSheet, ActivityIndicator, Platform,
+  Image, StyleSheet, ActivityIndicator, Platform, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/theme';
@@ -28,6 +28,8 @@ function SearchResult({ game, onPress }) {
 }
 
 export default function SearchScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 600;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,9 +79,12 @@ export default function SearchScreen({ navigation }) {
         </Text>
       </View>
       <FlatList
+        key={isTablet ? 'tablet' : 'phone'}
         data={results}
         keyExtractor={item => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingTop: 8 }}
+        numColumns={isTablet ? 2 : 1}
+        columnWrapperStyle={isTablet ? { gap: 12, paddingHorizontal: 24 } : undefined}
+        contentContainerStyle={{ padding: isTablet ? 0 : 16, paddingTop: 8, paddingBottom: 80 }}
         renderItem={({ item }) => (
           <SearchResult game={item} onPress={game => navigation.navigate('Detail', { game })} />
         )}
@@ -106,7 +111,7 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, color: COLORS.text, fontSize: 14 },
   filterLabel: { fontSize: 9, fontWeight: '800', color: COLORS.text4, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
-  result: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface2, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  result: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface2, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', flex: 1 },
   resultImg: { width: 58, height: 58, backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center' },
   resultBody: { flex: 1, paddingHorizontal: 12 },
   resultTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 3 },

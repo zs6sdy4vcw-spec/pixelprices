@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Platform,
+  ScrollView, Alert, ActivityIndicator, Platform, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,6 +27,8 @@ const FEATURES_PREMIUM = [
 ];
 
 export default function PremiumScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 600;
   const [userIsPremium, setUserIsPremium] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -142,7 +144,7 @@ export default function PremiumScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingBottom: 40, maxWidth: 700, alignSelf: 'center', width: '100%' },
   backBtn: { padding: 16, paddingTop: Platform.OS === 'android' ? 8 : 16 },
   backText: { fontSize: 14, color: COLORS.text2, fontWeight: '700' },
   hero: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
