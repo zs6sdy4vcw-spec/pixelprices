@@ -142,7 +142,7 @@ export default function HomeScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('new');
   const [tabData, setTabData]       = useState({ new: [], hot: [], savings: [] });
   const [tabPage, setTabPage]       = useState({ new: 1,  hot: 1,  savings: 1  });
-  const [tabHasMore, setTabHasMore] = useState({ new: false, hot: true, savings: true });
+  const [tabHasMore, setTabHasMore] = useState({ new: true, hot: true, savings: true });
   const [tabLoading, setTabLoading] = useState({ new: true, hot: false, savings: false });
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
@@ -167,10 +167,11 @@ export default function HomeScreen({ navigation }) {
   }, [tabData]);
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !tabHasMore[activeTab] || activeTab === 'new') return;
+    if (loadingMore || !tabHasMore[activeTab]) return;
     setLoadingMore(true);
     const nextPage = tabPage[activeTab] + 1;
     let result = { data: [], hasMore: false };
+    if (activeTab === 'new')     result = await fetchDealsPage('Recent', nextPage);
     if (activeTab === 'hot')     result = await fetchDealsPage('Trending', nextPage);
     if (activeTab === 'savings') result = await fetchDealsPage('Savings', nextPage, '&minSavings=50');
     const existingIds = new Set(tabData[activeTab].map(g => g.id));

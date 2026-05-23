@@ -165,9 +165,9 @@ export async function fetchDealsPage(sortBy, page = 1, extra = '') {
 }
 
 // ── Nouveautés (HomeScreen) — réduit à 8 appels max ──
-export async function fetchNewReleases() {
+export async function fetchNewReleases(page = 1) {
   // CheapShark Recent — plus fiable et plus de résultats que RAWG
-  return fetchDealsPage('Recent', 1);
+  return fetchDealsPage('Recent', page);
 }
 
 
