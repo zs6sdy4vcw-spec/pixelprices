@@ -166,75 +166,11 @@ export async function fetchDealsPage(sortBy, page = 1, extra = '') {
 
 // ── Nouveautés (HomeScreen) — réduit à 8 appels max ──
 export async function fetchNewReleases() {
-  const key = 'newReleases';
-  const cached = await getCached(key);
-  if (cached) return { data: cached, hasMore: false };
-
-  try {
-    const today = new Date();
-    const past90 = new Date(today);
-    past90.setDate(today.getDate() - 90);
-    const fmt = d => d.toISOString().split('T')[0];
-
-    const rawgRes = await fetch(
-      `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${fmt(past90)},${fmt(today)}&ordering=-added&page_size=40&platforms=4&parent_platforms=1`
-    );
-    if (!rawgRes.ok) return fetchDealsPage('Recent', 1);
-    const rawgData = await rawgRes.json();
-    if (!rawgData.results?.length) return fetchDealsPage('Recent', 1);
-
-    // Limite à 8 jeux pour éviter le rate limiting
-    const topGames = rawgData.results.slice(0, 20);
-    const results = [];
-
-    // Séquentiel au lieu de parallel pour éviter le flooding
-    for (const g of topGames) {
-      try {
-        const csGames = await csFetch(
-          `https://www.cheapshark.com/api/1.0/games?title=${encodeURIComponent(g.name)}&limit=1`
-        );
-        if (!Array.isArray(csGames) || !csGames[0]?.gameID) continue;
-        const cs = csGames[0];
-
-        const gameData = await csFetch(
-          `https://www.cheapshark.com/api/1.0/games?id=${cs.gameID}`
-        );
-        const deals = Array.isArray(gameData.deals) ? gameData.deals : [];
-        const prices = deals
-          .map(d => ({
-            price: parseFloat(d.price) || 0,
-            normalPrice: parseFloat(d.retailPrice) || 0,
-            savings: parseFloat(d.savings) || 0,
-            store: d.storeID, dealID: d.dealID,
-          }))
-          .filter(p => p.price > 0);
-
-        if (!prices.length) continue;
-
-        results.push({
-          id: g.id, cheapsharkId: cs.gameID,
-          title: g.name, platform: 'PC', type: 'Digital',
-          metacritic: g.metacritic || null,
-          imageUrl: g.background_image || null,
-          releaseDate: g.released, prices,
-        });
-      } catch {}
-    }
-
-    const sorted = results.sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
-    await setCached(key, sorted);
-    return { data: sorted, hasMore: false };
-  } catch (e) {
-    console.error('fetchNewReleases:', e.message);
-    if (e.message === 'RATE_LIMITED') {
-      const stale = await getStaleCache('newReleases');
-      if (stale) return { data: stale, hasMore: false };
-    }
-    return fetchDealsPage('Recent', 1);
-  }
+  // CheapShark Recent — plus fiable et plus de résultats que RAWG
+  return fetchDealsPage('Recent', 1);
 }
 
-// ── Détail jeu (DetailScreen) ──
+
 export async function fetchGameDeals(cheapsharkId) {
   if (!cheapsharkId) return { prices: [], imgUrl: null, metacritic: null };
   const key = `gamedeals_${cheapsharkId}`;
