@@ -2,7 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View, Image, StyleSheet, Animated, Platform } from 'react-native';
+import { Text, View, Image, StyleSheet, Animated, Platform, Easing } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 
@@ -22,35 +22,113 @@ const Stack = createNativeStackNavigator();
 export const LOGO = require('./assets/icons/icon.png');
 
 function SplashScreen({ onDone }) {
-  const scale = useRef(new Animated.Value(0.7)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
+  // Valeurs d'animation
+  const bgGlow       = useRef(new Animated.Value(0)).current; // fond qui s'illumine
+  const outerGlow    = useRef(new Animated.Value(0)).current; // glow extérieur large
+  const innerGlow    = useRef(new Animated.Value(0)).current; // glow intérieur
+  const logoOpacity  = useRef(new Animated.Value(0)).current; // logo fade in
+  const logoScale    = useRef(new Animated.Value(0.6)).current; // logo scale
+  const textOpacity  = useRef(new Animated.Value(0)).current; // texte fade in
+  const tagOpacity   = useRef(new Animated.Value(0)).current; // tagline fade in
+  const glowPulse    = useRef(new Animated.Value(1)).current; // pulse continu
+  const exitOpacity  = useRef(new Animated.Value(1)).current; // fade out final
 
   useEffect(() => {
+    // Pulse infini sur le glow
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowPulse, { toValue: 1.15, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(glowPulse, { toValue: 1.0,  duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+
     Animated.sequence([
+      // Phase 1 — fond qui s'illumine progressivement
+      Animated.timing(bgGlow, { toValue: 1, duration: 800, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+
+      // Phase 2 — glow extérieur apparaît + logo pop
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(scale, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }),
+        Animated.timing(outerGlow, { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.spring(logoScale,  { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
       ]),
-      Animated.timing(glow, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.delay(900),
+
+      // Phase 3 — glow intérieur + texte apparaît
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1.08, duration: 400, useNativeDriver: true }),
+        Animated.timing(innerGlow, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
       ]),
+
+      // Phase 4 — tagline apparaît
+      Animated.timing(tagOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+
+      // Phase 5 — reste visible + pulse
+      Animated.delay(1200),
+
+      // Phase 6 — fade out
+      Animated.timing(exitOpacity, { toValue: 0, duration: 500, easing: Easing.in(Easing.quad), useNativeDriver: true }),
     ]).start(() => onDone());
+
+    // Lance le pulse après 1.5s
+    const t = setTimeout(() => pulse.start(), 1500);
+    return () => clearTimeout(t);
   }, []);
 
+  // Couleur de fond animée
+  const bgColor = bgGlow.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#000000', '#0a0a0f'],
+  });
+
+  // Couleur du halo de fond
+  const bgHaloOpacity = bgGlow.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.25],
+  });
+
   return (
-    <View style={splash.container}>
+    <Animated.View style={[splash.container, { backgroundColor: bgColor }]}>
       <StatusBar style="light" />
-      <Animated.View style={[splash.glowRing, { opacity: glow, transform: [{ scale }] }]} />
-      <Animated.Image source={LOGO} style={[splash.logo, { opacity, transform: [{ scale }] }]} resizeMode="contain" />
-      <Animated.Text style={[splash.appName, { opacity }]}>
+
+      {/* Halo de fond large qui s'illumine */}
+      <Animated.View style={[splash.bgHalo, { opacity: bgHaloOpacity, transform: [{ scale: glowPulse }] }]} />
+      <Animated.View style={[splash.bgHaloInner, { opacity: bgHaloOpacity, transform: [{ scale: glowPulse }] }]} />
+
+      {/* Glow extérieur */}
+      <Animated.View style={[
+        splash.outerGlowRing,
+        { opacity: outerGlow, transform: [{ scale: glowPulse }] }
+      ]} />
+
+      {/* Glow intérieur */}
+      <Animated.View style={[
+        splash.innerGlowRing,
+        { opacity: innerGlow, transform: [{ scale: glowPulse }] }
+      ]} />
+
+      {/* Logo centré et grand */}
+      <Animated.Image
+        source={LOGO}
+        style={[splash.logo, {
+          opacity: logoOpacity,
+          transform: [{ scale: logoScale }],
+        }]}
+        resizeMode="contain"
+      />
+
+      {/* Nom de l'app */}
+      <Animated.Text style={[splash.appName, { opacity: textOpacity }]}>
         Pixel<Text style={{ color: '#4ade80' }}>Prices</Text>
       </Animated.Text>
-      <Animated.Text style={[splash.tagline, { opacity }]}>{i18n('tagline')}</Animated.Text>
-    </View>
+
+      {/* Tagline */}
+      <Animated.Text style={[splash.tagline, { opacity: tagOpacity }]}>
+        {i18n('tagline')}
+      </Animated.Text>
+
+      {/* Fade out global */}
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#0a0a0f', opacity: exitOpacity.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]} pointerEvents="none" />
+    </Animated.View>
   );
 }
 
@@ -112,11 +190,86 @@ export default function App() {
 }
 
 const splash = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0f', alignItems: 'center', justifyContent: 'center' },
-  glowRing: { position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(99,102,241,0.15)', shadowColor: '#6366f1', shadowOpacity: 0.8, shadowRadius: 60, shadowOffset: { width: 0, height: 0 } },
-  logo: { width: 160, height: 160, marginBottom: 20 },
-  appName: { fontSize: 36, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginBottom: 8 },
-  tagline: { fontSize: 13, color: '#475569', fontWeight: '600' },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Halo de fond large violet/indigo
+  bgHalo: {
+    position: 'absolute',
+    width: 600,
+    height: 600,
+    borderRadius: 300,
+    backgroundColor: 'rgba(99,102,241,0.12)',
+    shadowColor: '#6366f1',
+    shadowOpacity: 1,
+    shadowRadius: 120,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  bgHaloInner: {
+    position: 'absolute',
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: 'rgba(139,92,246,0.1)',
+    shadowColor: '#8b5cf6',
+    shadowOpacity: 1,
+    shadowRadius: 80,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  // Glow extérieur
+  outerGlowRing: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(99,102,241,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.2)',
+    shadowColor: '#6366f1',
+    shadowOpacity: 0.9,
+    shadowRadius: 50,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  // Glow intérieur
+  innerGlowRing: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(99,102,241,0.12)',
+    shadowColor: '#818cf8',
+    shadowOpacity: 1,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  // Logo grand et centré
+  logo: {
+    width: 200,
+    height: 200,
+    marginBottom: 28,
+    shadowColor: '#6366f1',
+    shadowOpacity: 0.8,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  appName: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -1,
+    marginBottom: 10,
+    textShadowColor: 'rgba(99,102,241,0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
+  },
+  tagline: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
 });
 
 import { registerRootComponent } from 'expo';
