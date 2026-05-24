@@ -246,9 +246,10 @@ const splash = StyleSheet.create({
   },
   // Logo grand et centré
   logo: {
+    marginTop: -30,
     width: 200,
     height: 200,
-    marginBottom: 28,
+    marginBottom: 16,
     shadowColor: '#6366f1',
     shadowOpacity: 0.8,
     shadowRadius: 30,
@@ -259,7 +260,7 @@ const splash = StyleSheet.create({
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: -1,
-    marginBottom: 10,
+    marginBottom: 8,
     textShadowColor: 'rgba(99,102,241,0.8)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
