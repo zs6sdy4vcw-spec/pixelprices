@@ -30,10 +30,28 @@ jobs:
       - name: 🔧 Install Expo CLI
         run: npm install -g @expo/cli
 
+      - name: 🔢 Set versionCode in app.json BEFORE prebuild
+        run: |
+          VERSION_CODE=$(( ${{ github.run_number }} + 20 ))
+          echo "Setting versionCode to $VERSION_CODE"
+          node -e "
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.expo.android.versionCode = $VERSION_CODE;
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
+            console.log('app.json versionCode:', app.expo.android.versionCode);
+          "
+          cat app.json | grep versionCode
+
       - name: 🏗️ Prebuild Android
         run: npx expo prebuild --platform android --clean
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: ✅ Verify versionCode in AndroidManifest
+        run: |
+          grep "versionCode" android/app/build.gradle || echo "checking..."
+          grep -r "versionCode" android/app/src/main/AndroidManifest.xml || echo "not in manifest"
 
       - name: 🔑 Setup keystore
         run: |
@@ -42,6 +60,7 @@ jobs:
 
       - name: 🏗️ Build Release AAB (Play Store)
         run: |
+          VERSION_CODE=$(( ${{ github.run_number }} + 20 ))
           cd android
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file=$(pwd)/app/release.keystore \
@@ -56,9 +75,9 @@ jobs:
       - name: 📤 Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: pixelprices-release-aab
+          name: pixelprices-aab-run${{ github.run_number }}
           path: android/app/build/outputs/bundle/release/*.aab
-          retention-days: 7
+          retention-days: 30
 
       - name: 🏗️ Build Release APK
         run: |
@@ -76,6 +95,6 @@ jobs:
       - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pixelprices-release-apk
+          name: pixelprices-apk-run${{ github.run_number }}
           path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 7
+          retention-days: 30
