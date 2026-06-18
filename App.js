@@ -16,6 +16,7 @@ import StoreDealsScreen from './screens/StoreDealsScreen';
 import { COLORS } from './constants/theme';
 import i18n from './services/i18n';
 import { loadInterstitial } from './components/AdBanner';
+import { initIAP, endIAPConnection } from './services/iapService';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -167,6 +168,8 @@ export default function App() {
 
   useEffect(() => {
     loadInterstitial();
+    initIAP();
+    return () => { endIAPConnection(); };
   }, []);
 
   if (showSplash) return (

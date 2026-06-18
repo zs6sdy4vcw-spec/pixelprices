@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Platform, useWindowDimensions,
+  ScrollView, Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../constants/theme';
 import i18n from '../services/i18n';
-import { isPremium, setPremium, restorePurchase, FREE_LIMITS } from '../services/premium';
+import { isPremium, setPremium, FREE_LIMITS } from '../services/premium';
+import {
+  fetchPremiumProduct, purchasePremium, restoreIAPPurchases,
+  addPurchaseListener,
+} from '../services/iapService';
 
 const FEATURES_FREE = [
   { icon: '🔔', label: `${FREE_LIMITS.maxAlerts} ${i18n('alertsMax')}` },
@@ -27,35 +31,56 @@ const FEATURES_PREMIUM = [
 ];
 
 export default function PremiumScreen({ navigation }) {
-  const { width } = useWindowDimensions();
-  const isTablet = width >= 600;
   const [userIsPremium, setUserIsPremium] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [product, setProduct] = useState(null); // infos prix réel Google Play
 
   useEffect(() => {
     isPremium().then(val => { setUserIsPremium(val); setChecking(false); });
+    fetchPremiumProduct().then(setProduct);
+
+    // Écoute les achats qui se complètent (callback Google Play)
+    const sub = addPurchaseListener(
+      async () => {
+        setUserIsPremium(true);
+        setLoading(false);
+        Alert.alert(i18n('welcomePremium'), i18n('welcomePremiumDesc'));
+      },
+      (error) => {
+        setLoading(false);
+        if (error.code !== 'E_USER_CANCELLED') {
+          Alert.alert(i18n('error'), i18n('purchaseError'));
+        }
+      }
+    );
+
+    return () => sub.remove();
   }, []);
 
   const handlePurchase = async () => {
     setLoading(true);
-    try {
-      Alert.alert(i18n('premiumTitle'), i18n('purchaseSimulated'), [
-        { text: i18n('cancel'), style: 'cancel' },
-        { text: i18n('confirmPurchase'), onPress: async () => {
-          await setPremium(true);
-          setUserIsPremium(true);
-          Alert.alert(i18n('welcomePremium'), i18n('welcomePremiumDesc'));
-        }},
-      ]);
-    } catch { Alert.alert(i18n('error'), i18n('purchaseError')); }
-    setLoading(false);
+    const result = await purchasePremium();
+
+    if (!result.success) {
+      setLoading(false);
+      if (result.error === 'CANCELLED') return; // L'utilisateur a annulé, pas d'erreur à afficher
+      if (result.error === 'IAP_UNAVAILABLE') {
+        Alert.alert(
+          i18n('premiumTitle'),
+          'Les achats ne sont disponibles que sur la version publiée du Play Store, pas en mode développement.'
+        );
+        return;
+      }
+      Alert.alert(i18n('error'), i18n('purchaseError'));
+    }
+    // Si succès, le listener addPurchaseListener prend le relais
   };
 
   const handleRestore = async () => {
     setLoading(true);
     try {
-      const result = await restorePurchase();
+      const result = await restoreIAPPurchases();
       if (result.restored) {
         setUserIsPremium(true);
         Alert.alert(i18n('restoreSuccess'), i18n('restoreSuccessDesc'));
@@ -77,6 +102,9 @@ export default function PremiumScreen({ navigation }) {
       <ActivityIndicator size="large" color={COLORS.primary} style={{ flex: 1 }} />
     </SafeAreaView>
   );
+
+  // Prix réel localisé de Google Play si disponible, sinon fallback $2.99
+  const displayPrice = product?.localizedPrice || product?.price || '$2.99';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -117,12 +145,12 @@ export default function PremiumScreen({ navigation }) {
         {!userIsPremium && (
           <>
             <View style={styles.priceWrap}>
-              <Text style={styles.priceAmount}>$2.99</Text>
+              <Text style={styles.priceAmount}>{displayPrice}</Text>
               <Text style={styles.priceLabel}>{i18n('oneTimePurchase')}</Text>
               <Text style={styles.priceNote}>{i18n('noSubscription')}</Text>
             </View>
             <TouchableOpacity style={[styles.buyBtn, loading && { opacity: 0.7 }]} onPress={handlePurchase} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buyBtnText}>{i18n('getPremium')} — $2.99</Text>}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buyBtnText}>{i18n('getPremium')} — {displayPrice}</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore} disabled={loading}>
               <Text style={styles.restoreBtnText}>{i18n('restorePurchase')}</Text>
@@ -144,7 +172,7 @@ export default function PremiumScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { paddingBottom: 40, maxWidth: 700, alignSelf: 'center', width: '100%' },
+  scroll: { paddingBottom: 40 },
   backBtn: { padding: 16, paddingTop: Platform.OS === 'android' ? 8 : 16 },
   backText: { fontSize: 14, color: COLORS.text2, fontWeight: '700' },
   hero: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
