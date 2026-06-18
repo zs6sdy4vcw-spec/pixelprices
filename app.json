@@ -27,7 +27,9 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
         "com.google.android.gms.permission.AD_ID",
-        "com.android.vending.BILLING"
+        "com.android.vending.BILLING",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
       ],
       "versionCode": 13
     },
@@ -45,7 +47,15 @@
           "delayAppMeasurementInit": true
         }
       ],
-      "react-native-iap"
+      "react-native-iap",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icons/icon.png",
+          "color": "#6366f1",
+          "sounds": []
+        }
+      ]
     ]
   }
 }
