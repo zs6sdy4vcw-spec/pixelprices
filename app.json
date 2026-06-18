@@ -26,7 +26,8 @@
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
-        "com.google.android.gms.permission.AD_ID"
+        "com.google.android.gms.permission.AD_ID",
+        "com.android.vending.BILLING"
       ],
       "versionCode": 13
     },
@@ -43,7 +44,8 @@
           "iosAppId": "ca-app-pub-4339337123328082~6116345618",
           "delayAppMeasurementInit": true
         }
-      ]
+      ],
+      "react-native-iap"
     ]
   }
 }
