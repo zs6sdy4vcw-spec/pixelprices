@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── ID du produit — DOIT correspondre exactement à celui créé dans Play Console ──
-export const PREMIUM_SKU = 'pixelprices_premium_lifetime';
+export const PREMIUM_SKU = 'pixelprices-premium-lifetime';
 
 let RNIap = null;
 function getIAP() {
