@@ -44,7 +44,7 @@ export async function fetchPremiumProduct() {
   const iap = getIAP();
   if (!iap) return null;
   try {
-    const products = await iap.getProducts({ skus: [PREMIUM_SKU] });
+    const products = await iap.getProducts([PREMIUM_SKU]);
     return products?.[0] || null;
   } catch (e) {
     console.error('fetchPremiumProduct error:', e);
@@ -91,7 +91,7 @@ export async function restoreIAPPurchases() {
   const iap = getIAP();
   if (!iap) return { restored: false };
   try {
-    const purchases = await iap.getAvailablePurchases();
+    const purchases = await iap.getAvailablePurchases({ andDangerouslyFinishTransactionAutomaticallyIOS: false });
     const premiumPurchase = purchases?.find(p => p.productId === PREMIUM_SKU);
     if (premiumPurchase) {
       await AsyncStorage.setItem('pixelprices_premium', 'true');
