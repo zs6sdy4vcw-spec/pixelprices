@@ -1,31 +1,26 @@
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ── ID du produit — DOIT correspondre exactement à celui créé dans Play Console ──
-export const PREMIUM_SKU = 'pixelprices.premium';
+export const PREMIUM_SKU = 'pixelprices_premium_lifetime';
 
-let RNIap = null;
+let iap = null;
+
 function getIAP() {
-  if (RNIap) return RNIap;
+  if (iap) return iap;
   try {
-    RNIap = require('react-native-iap');
-    return RNIap;
+    iap = require('expo-iap');
+    return iap;
   } catch (e) {
-    console.log('react-native-iap non disponible (Expo Go) — normal en dev');
+    console.log('expo-iap non disponible:', e.message);
     return null;
   }
 }
 
-// ── Initialise la connexion IAP — à appeler une fois au démarrage de l'app ──
 export async function initIAP() {
-  const iap = getIAP();
-  if (!iap) return false;
+  const lib = getIAP();
+  if (!lib) return false;
   try {
-    await iap.initConnection();
-    if (Platform.OS === 'android') {
-      // Vide les achats en attente non consommés (sécurité)
-      await iap.flushFailedPurchasesCachedAsPendingAndroid().catch(() => {});
-    }
+    await lib.initConnection();
+    console.log('expo-iap connected');
     return true;
   } catch (e) {
     console.error('initIAP error:', e);
@@ -34,17 +29,17 @@ export async function initIAP() {
 }
 
 export async function endIAPConnection() {
-  const iap = getIAP();
-  if (!iap) return;
-  try { await iap.endConnection(); } catch {}
+  const lib = getIAP();
+  if (!lib) return;
+  try { await lib.endConnection(); } catch {}
 }
 
-// ── Récupère les infos du produit (prix localisé, etc.) ──
 export async function fetchPremiumProduct() {
-  const iap = getIAP();
-  if (!iap) return null;
+  const lib = getIAP();
+  if (!lib) return null;
   try {
-    const products = await iap.getProducts([PREMIUM_SKU]);
+    const products = await lib.getProducts([PREMIUM_SKU]);
+    console.log('Products fetched:', products);
     return products?.[0] || null;
   } catch (e) {
     console.error('fetchPremiumProduct error:', e);
@@ -52,50 +47,39 @@ export async function fetchPremiumProduct() {
   }
 }
 
-// ── Lance l'achat réel via Google Play Billing ──
 export async function purchasePremium() {
-  const iap = getIAP();
-  if (!iap) {
+  const lib = getIAP();
+  if (!lib) {
     return { success: false, error: 'IAP_UNAVAILABLE' };
   }
   try {
-    const purchase = await iap.requestPurchase({ skus: [PREMIUM_SKU] });
-    return { success: true, purchase };
+    console.log('Requesting purchase for SKU:', PREMIUM_SKU);
+    await lib.requestPurchase({
+      request: {
+        google: { skus: [PREMIUM_SKU] },
+      },
+      type: 'in-app',
+    });
+    return { success: true };
   } catch (e) {
+    console.error('purchasePremium error:', e.code, e.message);
     if (e.code === 'E_USER_CANCELLED') {
       return { success: false, error: 'CANCELLED' };
     }
-    console.error('purchasePremium error:', e);
     return { success: false, error: e.message || 'UNKNOWN' };
   }
 }
 
-// ── Confirme/consomme l'achat après validation (produit non-consommable = achat à vie) ──
-export async function finalizePurchase(purchase) {
-  const iap = getIAP();
-  if (!iap || !purchase) return false;
-  try {
-    // acknowledgePurchaseAndroid pour les produits non-consommables (achat à vie)
-    await iap.finishTransaction({ purchase, isConsumable: false });
-    await AsyncStorage.setItem('pixelprices_premium', 'true');
-    await AsyncStorage.setItem('pixelprices_purchase_token', purchase.purchaseToken || '');
-    return true;
-  } catch (e) {
-    console.error('finalizePurchase error:', e);
-    return false;
-  }
-}
-
-// ── Restaure les achats existants (réinstallation, nouvel appareil) ──
 export async function restoreIAPPurchases() {
-  const iap = getIAP();
-  if (!iap) return { restored: false };
+  const lib = getIAP();
+  if (!lib) return { restored: false };
   try {
-    const purchases = await iap.getAvailablePurchases({ andDangerouslyFinishTransactionAutomaticallyIOS: false });
-    const premiumPurchase = purchases?.find(p => p.productId === PREMIUM_SKU);
-    if (premiumPurchase) {
+    const purchases = await lib.getAvailablePurchases();
+    console.log('Available purchases:', purchases);
+    const premium = purchases?.find(p => p.productId === PREMIUM_SKU);
+    if (premium) {
       await AsyncStorage.setItem('pixelprices_premium', 'true');
-      return { restored: true, purchase: premiumPurchase };
+      return { restored: true };
     }
     return { restored: false };
   } catch (e) {
@@ -104,19 +88,26 @@ export async function restoreIAPPurchases() {
   }
 }
 
-// ── Listener pour les achats (à utiliser dans useEffect au niveau App) ──
-export function addPurchaseListener(onPurchaseUpdate, onPurchaseError) {
-  const iap = getIAP();
-  if (!iap) return { remove: () => {} };
+export function addPurchaseListener(onSuccess, onError) {
+  const lib = getIAP();
+  if (!lib) return { remove: () => {} };
 
-  const updateSub = iap.purchaseUpdatedListener(async (purchase) => {
-    const ok = await finalizePurchase(purchase);
-    if (ok && onPurchaseUpdate) onPurchaseUpdate(purchase);
+  const updateSub = lib.purchaseUpdatedListener(async (purchase) => {
+    console.log('Purchase updated:', purchase);
+    if (purchase?.productId === PREMIUM_SKU) {
+      try {
+        await lib.finishTransaction({ purchase, isConsumable: false });
+        await AsyncStorage.setItem('pixelprices_premium', 'true');
+        if (onSuccess) onSuccess(purchase);
+      } catch (e) {
+        console.error('finishTransaction error:', e);
+      }
+    }
   });
 
-  const errorSub = iap.purchaseErrorListener((error) => {
+  const errorSub = lib.purchaseErrorListener((error) => {
     console.error('Purchase error listener:', error);
-    if (onPurchaseError) onPurchaseError(error);
+    if (onError) onError(error);
   });
 
   return {
