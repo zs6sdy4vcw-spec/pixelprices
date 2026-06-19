@@ -9,22 +9,13 @@ import { COLORS } from '../constants/theme';
 import i18n from '../services/i18n';
 import AdBanner from '../components/AdBanner';
 import { fetchNewReleases, fetchDealsPage } from '../services/gameData';
+import { getExchangeRates, convertUSD, SUPPORTED_CURRENCIES } from '../services/currencyService';
 
 const LOGO = require('../assets/icons/icon.png');
-const CURRENCIES = [
-  { code: 'CAD', label: '🇨🇦 CAD', rate: 1.37 },
-  { code: 'USD', label: '🇺🇸 USD', rate: 1.00 },
-  { code: 'EUR', label: '🇪🇺 EUR', rate: 0.92 },
-  { code: 'GBP', label: '🇬🇧 GBP', rate: 0.79 },
-  { code: 'AUD', label: '🇦🇺 AUD', rate: 1.53 },
-  { code: 'MXN', label: '🇲🇽 MXN', rate: 17.15 },
-  { code: 'BRL', label: '🇧🇷 BRL', rate: 5.05 },
-  { code: 'JPY', label: '🇯🇵 JPY', rate: 149.50 },
-];
+// CURRENCIES viennent de currencyService.js (taux temps réel)
 
-function convertPrice(usdPrice, currency) {
-  const cur = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
-  return usdPrice * cur.rate;
+function convertPrice(usdPrice, currency, rates) {
+  return convertUSD(usdPrice, rates, currency);
 }
 
 function MetaBadge({ score }) {
@@ -56,12 +47,12 @@ function DaysAgoBadge({ releaseDate }) {
   );
 }
 
-function GameCard({ game, onPress, currency, isTablet }) {
+function GameCard({ game, onPress, currency, rates, isTablet }) {
   const validPrices = game.prices.filter(p => p.price > 0);
   const minUSD = validPrices.length ? Math.min(...validPrices.map(p => p.price)) : 0;
   const maxNormal = validPrices.length ? Math.max(...validPrices.map(p => p.normalPrice || p.price)) : 0;
-  const converted = minUSD > 0 ? convertPrice(minUSD, currency) : null;
-  const savedConverted = (maxNormal - minUSD) > 0.5 ? convertPrice(maxNormal - minUSD, currency) : 0;
+  const converted = minUSD > 0 ? convertPrice(minUSD, currency, rates) : null;
+  const savedConverted = (maxNormal - minUSD) > 0.5 ? convertPrice(maxNormal - minUSD, currency, rates) : 0;
   const maxDiscount = validPrices.length ? Math.max(...validPrices.map(p => parseFloat(p.savings) || 0)) : 0;
   const imgSize = isTablet ? 100 : 80;
 
@@ -111,14 +102,14 @@ function CurrencyPicker({ visible, current, onSelect, onClose }) {
         <View style={styles.modalSheet}>
           <View style={styles.modalHandle} />
           <Text style={styles.modalTitle}>{i18n('chooseCurrency')}</Text>
-          {CURRENCIES.map(cur => (
+          {SUPPORTED_CURRENCIES.map(cur => (
             <TouchableOpacity
               key={cur.code}
               style={[styles.currencyRow, current === cur.code && styles.currencyRowActive]}
               onPress={() => { onSelect(cur.code); onClose(); }}
             >
               <Text style={styles.currencyLabel}>{cur.label}</Text>
-              <Text style={styles.currencyRate}>1 USD = {cur.rate} {cur.code}</Text>
+              <Text style={styles.currencyRate}>1 USD = {rates[cur.code] ? rates[cur.code].toFixed(4) : '...'} {cur.code}</Text>
               {current === cur.code && <Text style={styles.currencyCheck}>✓</Text>}
             </TouchableOpacity>
           ))}
@@ -149,9 +140,10 @@ export default function HomeScreen({ navigation }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [currency, setCurrency] = useState('CAD');
+  const [rates, setRates] = useState({});
   const [showPicker, setShowPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const curInfo = CURRENCIES.find(c => c.code === currency);
+  const curInfo = SUPPORTED_CURRENCIES.find(c => c.code === currency);
 
   const loadTab = useCallback(async (tabId, force = false) => {
     if (!force && tabData[tabId].length > 0) return;
@@ -182,7 +174,10 @@ export default function HomeScreen({ navigation }) {
     setLoadingMore(false);
   }, [activeTab, tabPage, tabHasMore, tabData, loadingMore]);
 
-  useEffect(() => { loadTab('new'); }, []);
+  useEffect(() => {
+    loadTab('new');
+    getExchangeRates().then(setRates);
+  }, []);
   useEffect(() => { loadTab(activeTab); }, [activeTab]);
 
   useEffect(() => {
@@ -251,7 +246,7 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
         <View style={styles.rateBar}>
-          <Text style={styles.rateBarText}>💱 1 USD = {curInfo?.rate} {currency}</Text>
+          <Text style={styles.rateBarText}>💱 1 USD = {(rates[currency] || '...').toFixed ? (rates[currency]).toFixed(4) : '...'} {currency}</Text>
         </View>
         <View style={styles.searchWrap}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -336,6 +331,7 @@ export default function HomeScreen({ navigation }) {
                 <GameCard
                   game={item}
                   currency={currency}
+                  rates={rates}
                   isTablet={isTablet}
                   onPress={game => navigation.navigate('Detail', { game, currency })}
                 />
