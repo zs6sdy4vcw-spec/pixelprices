@@ -47,7 +47,7 @@ function DaysAgoBadge({ releaseDate }) {
   );
 }
 
-function GameCard({ game, onPress, currency, rates, isTablet }) {
+function GameCard({ game, onPress, currency, rates = {}, isTablet }) {
   const validPrices = game.prices.filter(p => p.price > 0);
   const minUSD = validPrices.length ? Math.min(...validPrices.map(p => p.price)) : 0;
   const maxNormal = validPrices.length ? Math.max(...validPrices.map(p => p.normalPrice || p.price)) : 0;
@@ -95,7 +95,7 @@ function GameCard({ game, onPress, currency, rates, isTablet }) {
   );
 }
 
-function CurrencyPicker({ visible, current, onSelect, onClose }) {
+function CurrencyPicker({ visible, current, onSelect, onClose, rates = {} }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
@@ -140,7 +140,10 @@ export default function HomeScreen({ navigation }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [currency, setCurrency] = useState('CAD');
-  const [rates, setRates] = useState({});
+  const [rates, setRates] = useState({
+    CAD: 1.41, USD: 1.00, EUR: 0.92, GBP: 0.79,
+    AUD: 1.53, MXN: 17.15, BRL: 5.05, JPY: 149.50,
+  });
   const [showPicker, setShowPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const curInfo = SUPPORTED_CURRENCIES.find(c => c.code === currency);
