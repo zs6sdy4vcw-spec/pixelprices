@@ -47,7 +47,6 @@
           "delayAppMeasurementInit": true
         }
       ],
-      "react-native-iap",
       [
         "expo-notifications",
         {
