@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const PREMIUM_SKU = 'pixelprices_premium_lifetime';
+export const PREMIUM_SKU = 'pixelprices.premium';
 
 let iap = null;
 
