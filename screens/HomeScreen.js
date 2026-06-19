@@ -327,8 +327,10 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.emptyText}>{i18n('pullRefresh')}</Text>
             </View>
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             if (item.id === '__placeholder__') return <View style={{ flex: 1, margin: 6 }} />;
+            // Bannière pub toutes les 8 items (après le 7ème, 15ème, etc.)
+            const showAd = !search.trim() && index > 0 && index % 8 === 7;
             return (
               <View style={numColumns === 2 ? { flex: 1 } : {}}>
                 <GameCard
@@ -337,6 +339,11 @@ export default function HomeScreen({ navigation }) {
                   isTablet={isTablet}
                   onPress={game => navigation.navigate('Detail', { game, currency })}
                 />
+                {showAd && numColumns === 1 && (
+                  <View style={{ marginTop: 10 }}>
+                    <AdBanner />
+                  </View>
+                )}
               </View>
             );
           }}
@@ -371,7 +378,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 11, fontWeight: '700', color: COLORS.text3 },
   tabTextActive: { color: COLORS.primary },
   tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, backgroundColor: COLORS.primary, borderRadius: 2 },
-  list: { padding: 16, paddingBottom: 80 },
+  list: { padding: 16, paddingBottom: 100 },
   sectionLabel: { fontSize: 10, fontWeight: '800', color: COLORS.text4, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontSize: 14, color: COLORS.text3, fontWeight: '700', textAlign: 'center', paddingHorizontal: 32 },
